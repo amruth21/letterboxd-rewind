@@ -1,0 +1,9 @@
+{
+  "functions": {
+    "api/scrape_job/index.py": {
+      "runtime": "python3.9",
+      "maxDuration": 300
+    }
+  },
+  "buildCommand": "npm run build"
+}

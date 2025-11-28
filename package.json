@@ -1,0 +1,29 @@
+{
+  "name": "letterboxd-rewind",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "framer-motion": "^12.23.24",
+    "lucide-react": "^0.554.0",
+    "next": "^14.2.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "recharts": "^3.4.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/line-clamp": "^0.4.4",
+    "@types/node": "^20.14.0",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "autoprefixer": "^10.4.22",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5.4.5"
+  }
+}
