@@ -24,12 +24,26 @@ export async function POST(request: NextRequest) {
     }
 
     // Call the Python serverless function
-    // Works in both production and local development (with vercel dev)
-    const baseUrl = process.env.VERCEL_URL 
-      ? `https://${process.env.VERCEL_URL}` 
-      : process.env.VERCEL 
-        ? `http://localhost:${process.env.PORT || 3000}`
-        : 'http://localhost:3000'
+    // Use the request's host to construct URL - this avoids authentication issues
+    // because we're calling within the same deployment
+    const host = request.headers.get('host') || request.headers.get('x-forwarded-host')
+    const protocol = request.headers.get('x-forwarded-proto') || 'https'
+    
+    let baseUrl: string
+    
+    if (host) {
+      // Use the request's host - this works for both production and preview deployments
+      baseUrl = `${protocol}://${host}`
+    } else if (process.env.VERCEL_URL) {
+      // Fallback to VERCEL_URL if host header is not available
+      baseUrl = `https://${process.env.VERCEL_URL}`
+    } else if (process.env.VERCEL) {
+      // Local Vercel dev
+      baseUrl = `http://localhost:${process.env.PORT || 3000}`
+    } else {
+      // Fallback for local Next.js dev
+      baseUrl = 'http://localhost:3000'
+    }
     
     const pythonFunctionUrl = `${baseUrl}/api/scrape_job`
     const requestPayload = {
