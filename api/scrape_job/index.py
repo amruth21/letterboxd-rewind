@@ -323,8 +323,8 @@ async def run_scrape(username: str, year):
         
         # Top rewatched movies (max 3, only movies watched more than once)
         'top_rewatched': [
-            {"movie": movie, "count": count}
-            for movie, count in stats_collector.top_rewatched(3)
+            {"movie": item["movie"], "count": item["count"]}
+            for item in stats_collector.top_rewatched(3)
         ],
         
         # Most watched (by count)
