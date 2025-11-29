@@ -277,26 +277,10 @@ async def run_scrape(username: str, year):
         for item, score, count, avg in stats_collector.top_by_weighted_average("Directors", 5)
     ]
     
-    # Use the scraper to fetch images
+    # Use the scraper to fetch images (already in async context, so use await)
     image_scraper = LetterboxdScraper(username=username, year=2024, request_delay=0.1)
-    try:
-        top_actors_with_images = asyncio.get_event_loop().run_until_complete(
-            image_scraper.fetch_person_images(top_actors_for_images, "actor", max_concurrency=5)
-        )
-    except RuntimeError:
-        # If event loop is already running, create a new one
-        top_actors_with_images = asyncio.run(
-            image_scraper.fetch_person_images(top_actors_for_images, "actor", max_concurrency=5)
-        )
-    
-    try:
-        top_directors_with_images = asyncio.get_event_loop().run_until_complete(
-            image_scraper.fetch_person_images(top_directors_for_images, "director", max_concurrency=5)
-        )
-    except RuntimeError:
-        top_directors_with_images = asyncio.run(
-            image_scraper.fetch_person_images(top_directors_for_images, "director", max_concurrency=5)
-        )
+    top_actors_with_images = await image_scraper.fetch_person_images(top_actors_for_images, "actor", max_concurrency=5)
+    top_directors_with_images = await image_scraper.fetch_person_images(top_directors_for_images, "director", max_concurrency=5)
     
     print(f"[RUN_SCRAPE] Image fetching completed in {time.time() - image_fetch_start:.2f}s", flush=True)
     
