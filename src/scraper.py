@@ -826,6 +826,7 @@ class LetterboxdScraper:
         url = f"https://letterboxd.com/{person_type}/{slug}/"
         
         try:
+            print(f"[FETCH_PERSON_IMAGE] Fetching image for {person_name} from {url}", flush=True)
             if AIOHTTP_AVAILABLE:
                 async with aiohttp.ClientSession() as session:
                     async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as resp:
@@ -844,15 +845,45 @@ class LetterboxdScraper:
             og_image = soup.find("meta", attrs={"property": "og:image"})
             if og_image and og_image.get("content"):
                 img_url = og_image["content"]
-                # Filter out default/placeholder images
-                if "avatar" in img_url.lower() or "static" not in img_url:
+                # Convert relative URLs to absolute
+                if img_url.startswith("//"):
+                    img_url = "https:" + img_url
+                elif img_url.startswith("/"):
+                    img_url = "https://letterboxd.com" + img_url
+                # Return if it's a valid image URL
+                if img_url and ("ltrbxd.com" in img_url or "letterboxd.com" in img_url or "s3" in img_url or "amazonaws.com" in img_url):
+                    print(f"[FETCH_PERSON_IMAGE] Found og:image for {person_name}: {img_url}", flush=True)
                     return img_url
             
             # Alternative: look for avatar in the page
             avatar = soup.find("img", class_="avatar")
-            if avatar and avatar.get("src"):
-                return avatar["src"]
+            if avatar:
+                img_url = avatar.get("src") or avatar.get("data-src")
+                if img_url:
+                    # Convert relative URLs to absolute
+                    if img_url.startswith("//"):
+                        img_url = "https:" + img_url
+                    elif img_url.startswith("/"):
+                        img_url = "https://letterboxd.com" + img_url
+                    if img_url and ("ltrbxd.com" in img_url or "letterboxd.com" in img_url or "s3" in img_url or "amazonaws.com" in img_url):
+                        print(f"[FETCH_PERSON_IMAGE] Found avatar img for {person_name}: {img_url}", flush=True)
+                        return img_url
             
+            # Also try looking for profile image in various other locations
+            profile_img = soup.find("img", attrs={"alt": lambda x: x and person_name.lower() in x.lower()})
+            if profile_img:
+                img_url = profile_img.get("src") or profile_img.get("data-src")
+                if img_url:
+                    # Convert relative URLs to absolute
+                    if img_url.startswith("//"):
+                        img_url = "https:" + img_url
+                    elif img_url.startswith("/"):
+                        img_url = "https://letterboxd.com" + img_url
+                    if img_url and ("ltrbxd.com" in img_url or "letterboxd.com" in img_url or "s3" in img_url or "amazonaws.com" in img_url):
+                        print(f"[FETCH_PERSON_IMAGE] Found profile img for {person_name}: {img_url}", flush=True)
+                        return img_url
+            
+            print(f"[FETCH_PERSON_IMAGE] No image found for {person_name}", flush=True)
             return None
             
         except Exception as e:

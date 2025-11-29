@@ -27,10 +27,19 @@ export default function TopRatedList({ title, items, itemsWithImages, maxItems =
   // Merge image data with items
   const displayItems = items.slice(0, maxItems).map((item, idx) => {
     const imageData = itemsWithImages?.find(img => img.name === item.name)
-    return {
+    const merged = {
       ...item,
       image_url: imageData?.image_url || null
     }
+    // Debug logging
+    if (process.env.NODE_ENV === 'development') {
+      if (imageData) {
+        console.log(`[TopRatedList] Found image for ${item.name}:`, imageData.image_url)
+      } else {
+        console.log(`[TopRatedList] No image data found for ${item.name}`, { itemsWithImages: itemsWithImages?.map(i => i.name) })
+      }
+    }
+    return merged
   })
 
   if (displayItems.length === 0) {

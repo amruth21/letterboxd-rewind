@@ -278,11 +278,21 @@ async def run_scrape(username: str, year):
     ]
     
     # Use the scraper to fetch images (already in async context, so use await)
-    image_scraper = LetterboxdScraper(username=username, year=2024, request_delay=0.1)
-    top_actors_with_images = await image_scraper.fetch_person_images(top_actors_for_images, "actor", max_concurrency=5)
-    top_directors_with_images = await image_scraper.fetch_person_images(top_directors_for_images, "director", max_concurrency=5)
-    
-    print(f"[RUN_SCRAPE] Image fetching completed in {time.time() - image_fetch_start:.2f}s", flush=True)
+    try:
+        image_scraper = LetterboxdScraper(username=username, year=2024, request_delay=0.1)
+        top_actors_with_images = await image_scraper.fetch_person_images(top_actors_for_images, "actor", max_concurrency=5)
+        top_directors_with_images = await image_scraper.fetch_person_images(top_directors_for_images, "director", max_concurrency=5)
+        
+        print(f"[RUN_SCRAPE] Image fetching completed in {time.time() - image_fetch_start:.2f}s", flush=True)
+        print(f"[RUN_SCRAPE] Actors with images: {[a.get('name') + ':' + str(bool(a.get('image_url'))) for a in top_actors_with_images]}", flush=True)
+        print(f"[RUN_SCRAPE] Directors with images: {[d.get('name') + ':' + str(bool(d.get('image_url'))) for d in top_directors_with_images]}", flush=True)
+    except Exception as e:
+        print(f"[RUN_SCRAPE] Error fetching images: {e}", flush=True)
+        import traceback
+        print(f"[RUN_SCRAPE] Traceback: {traceback.format_exc()}", flush=True)
+        # Return empty image data on error
+        top_actors_with_images = top_actors_for_images
+        top_directors_with_images = top_directors_for_images
     
     # Convert DataFrame to list of dicts for CSV export
     # Convert Timestamp objects to strings and handle NaN values for JSON serialization
