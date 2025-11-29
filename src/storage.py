@@ -19,8 +19,23 @@ class FilmDataStorage:
         Args:
             output_dir: Directory to save output files
         """
-        self.output_dir = output_dir
-        self._ensure_output_dir()
+        # In serverless environments (like Vercel), use /tmp or skip directory creation
+        # Check if we're in a serverless environment
+        if os.environ.get('VERCEL') or os.environ.get('AWS_LAMBDA_FUNCTION_NAME'):
+            # Use /tmp in serverless environments (writable)
+            self.output_dir = "/tmp"
+        else:
+            self.output_dir = output_dir
+        
+        # Only create directory if we're not in a read-only filesystem
+        # Skip if directory creation fails (e.g., in serverless with no /tmp access)
+        try:
+            self._ensure_output_dir()
+        except (OSError, PermissionError) as e:
+            # If we can't create the directory, that's okay - we might not need it
+            # (e.g., if we're only using create_dataframe and not saving files)
+            print(f"Warning: Could not create output directory {self.output_dir}: {e}")
+            print("Continuing without file output capability...")
 
     def _ensure_output_dir(self):
         """Ensure output directory exists"""
