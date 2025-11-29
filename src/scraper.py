@@ -848,14 +848,20 @@ class LetterboxdScraper:
                 # The image might be inside the div as an img tag
                 img_tag = avatar_div.find("img")
                 if img_tag:
-                    img_url = img_tag.get("src") or img_tag.get("data-src") or img_tag.get("data-original") or img_tag.get("data-lazy-src")
+                    # Check multiple possible attributes for the image URL
+                    img_url = (img_tag.get("src") or 
+                              img_tag.get("data-src") or 
+                              img_tag.get("data-original") or 
+                              img_tag.get("data-lazy-src") or
+                              img_tag.get("data-image") or
+                              img_tag.get("data-lazy"))
                     if img_url:
                         if img_url.startswith("//"):
                             img_url = "https:" + img_url
                         elif img_url.startswith("/"):
                             img_url = "https://letterboxd.com" + img_url
-                        # Skip default images
-                        if img_url and "default-share" not in img_url and ("ltrbxd.com" in img_url or "s3" in img_url or "amazonaws.com" in img_url):
+                        # Skip default/empty/placeholder images
+                        if img_url and "default-share" not in img_url and "empty" not in img_url.lower() and ("ltrbxd.com" in img_url or "s3" in img_url or "amazonaws.com" in img_url):
                             print(f"[FETCH_PERSON_IMAGE] Found avatar person-image div img for {person_name}: {img_url}", flush=True)
                             return img_url
                 
@@ -871,7 +877,7 @@ class LetterboxdScraper:
                                 img_url = "https:" + img_url
                             elif img_url.startswith("/"):
                                 img_url = "https://letterboxd.com" + img_url
-                            if img_url and "default-share" not in img_url and ("ltrbxd.com" in img_url or "s3" in img_url or "amazonaws.com" in img_url):
+                            if img_url and "default-share" not in img_url and "empty" not in img_url.lower() and ("ltrbxd.com" in img_url or "s3" in img_url or "amazonaws.com" in img_url):
                                 print(f"[FETCH_PERSON_IMAGE] Found nearby img to avatar div for {person_name}: {img_url}", flush=True)
                                 return img_url
                 
@@ -886,18 +892,24 @@ class LetterboxdScraper:
                             img_url = "https:" + img_url
                         elif img_url.startswith("/"):
                             img_url = "https://letterboxd.com" + img_url
-                        if img_url and "default-share" not in img_url and ("ltrbxd.com" in img_url or "s3" in img_url or "amazonaws.com" in img_url):
+                        if img_url and "default-share" not in img_url and "empty" not in img_url.lower() and ("ltrbxd.com" in img_url or "s3" in img_url or "amazonaws.com" in img_url):
                             print(f"[FETCH_PERSON_IMAGE] Found avatar person-image div background-image for {person_name}: {img_url}", flush=True)
                             return img_url
                 
-                # Or check data attributes on the div itself
-                img_url = avatar_div.get("data-src") or avatar_div.get("data-original") or avatar_div.get("data-lazy-src") or avatar_div.get("data-image")
+                # Or check data attributes on the div itself (more comprehensive check)
+                img_url = (avatar_div.get("data-src") or 
+                          avatar_div.get("data-original") or 
+                          avatar_div.get("data-lazy-src") or 
+                          avatar_div.get("data-image") or
+                          avatar_div.get("data-lazy") or
+                          avatar_div.get("data-person-image") or
+                          avatar_div.get("data-avatar"))
                 if img_url:
                     if img_url.startswith("//"):
                         img_url = "https:" + img_url
                     elif img_url.startswith("/"):
                         img_url = "https://letterboxd.com" + img_url
-                    if img_url and "default-share" not in img_url and ("ltrbxd.com" in img_url or "s3" in img_url or "amazonaws.com" in img_url):
+                    if img_url and "default-share" not in img_url and "empty" not in img_url.lower() and ("ltrbxd.com" in img_url or "s3" in img_url or "amazonaws.com" in img_url):
                         print(f"[FETCH_PERSON_IMAGE] Found avatar person-image div data attribute for {person_name}: {img_url}", flush=True)
                         return img_url
                 
@@ -911,7 +923,7 @@ class LetterboxdScraper:
                             img_url = "https:" + img_url
                         elif img_url.startswith("/"):
                             img_url = "https://letterboxd.com" + img_url
-                        if img_url and "default-share" not in img_url and ("ltrbxd.com" in img_url or "s3" in img_url or "amazonaws.com" in img_url):
+                        if img_url and "default-share" not in img_url and "empty" not in img_url.lower() and ("ltrbxd.com" in img_url or "s3" in img_url or "amazonaws.com" in img_url):
                             print(f"[FETCH_PERSON_IMAGE] Found parent data attribute for {person_name}: {img_url}", flush=True)
                             return img_url
                     current = current.parent
@@ -928,8 +940,8 @@ class LetterboxdScraper:
                             img_url = "https:" + img_url
                         elif img_url.startswith("/"):
                             img_url = "https://letterboxd.com" + img_url
-                        # Skip default images
-                        if img_url and "default-share" not in img_url and ("ltrbxd.com" in img_url or "s3" in img_url or "amazonaws.com" in img_url):
+                        # Skip default/empty/placeholder images
+                        if img_url and "default-share" not in img_url and "empty" not in img_url.lower() and ("ltrbxd.com" in img_url or "s3" in img_url or "amazonaws.com" in img_url):
                             print(f"[FETCH_PERSON_IMAGE] Found profile header img for {person_name}: {img_url}", flush=True)
                             return img_url
             
@@ -942,8 +954,8 @@ class LetterboxdScraper:
                         img_url = "https:" + img_url
                     elif img_url.startswith("/"):
                         img_url = "https://letterboxd.com" + img_url
-                    # Skip default images
-                    if img_url and "default-share" not in img_url and ("ltrbxd.com" in img_url or "s3" in img_url or "amazonaws.com" in img_url):
+                    # Skip default/empty/placeholder images
+                    if img_url and "default-share" not in img_url and "empty" not in img_url.lower() and ("ltrbxd.com" in img_url or "s3" in img_url or "amazonaws.com" in img_url):
                         print(f"[FETCH_PERSON_IMAGE] Found avatar img for {person_name}: {img_url}", flush=True)
                         return img_url
             
@@ -967,7 +979,7 @@ class LetterboxdScraper:
                                     img_url = image.get("url") or image.get("@id")
                                 else:
                                     continue
-                                if img_url and "default-share" not in img_url and ("ltrbxd.com" in img_url or "s3" in img_url or "amazonaws.com" in img_url):
+                                if img_url and "default-share" not in img_url and "empty" not in img_url.lower() and ("ltrbxd.com" in img_url or "s3" in img_url or "amazonaws.com" in img_url):
                                     if img_url.startswith("//"):
                                         img_url = "https:" + img_url
                                     elif img_url.startswith("/"):
@@ -977,13 +989,39 @@ class LetterboxdScraper:
                 except (json.JSONDecodeError, AttributeError):
                     pass
                 
+                # Look for JavaScript variables that might contain person data
+                # Pattern: var personData = {...} or window.personData = {...}
+                person_data_match = re.search(r'(?:var|let|const|window\.)\s*\w*[Pp]erson\w*\s*=\s*({[^}]*"image"[^}]*})', text, re.DOTALL)
+                if person_data_match:
+                    try:
+                        person_data = json.loads(person_data_match.group(1))
+                        img_url = person_data.get("image") or person_data.get("avatar") or person_data.get("photo")
+                        if img_url and "default-share" not in img_url and "empty" not in img_url.lower() and ("ltrbxd.com" in img_url or "s3" in img_url or "amazonaws.com" in img_url):
+                            if img_url.startswith("//"):
+                                img_url = "https:" + img_url
+                            elif img_url.startswith("/"):
+                                img_url = "https://letterboxd.com" + img_url
+                            print(f"[FETCH_PERSON_IMAGE] Found JavaScript person data image for {person_name}: {img_url}", flush=True)
+                            return img_url
+                    except (json.JSONDecodeError, KeyError):
+                        pass
+                
                 # Look for profile image patterns in other script data
                 # Pattern for person-image URLs (usually in a.ltrbxd.com or s.ltrbxd.com)
+                # Look for a.ltrbxd.com URLs first (these are often profile images)
+                a_ltrbxd_matches = re.findall(r'https://a\.ltrbxd\.com/[^"\'<>\s]*\.(?:jpg|jpeg|png|webp)', text, re.IGNORECASE)
+                for match in a_ltrbxd_matches:
+                    if "default-share" not in match and "empty" not in match.lower():
+                        print(f"[FETCH_PERSON_IMAGE] Found script a.ltrbxd.com img for {person_name}: {match}", flush=True)
+                        return match
+                
+                # Then look for other image URLs
                 matches = re.findall(r'https://[^"\'<>\s]*\.(?:jpg|jpeg|png|webp)', text, re.IGNORECASE)
                 for match in matches:
-                    if "default-share" not in match and ("ltrbxd.com" in match or "s3" in match or "amazonaws.com" in match):
-                        # Prefer person-image or avatar URLs
-                        if "person" in match.lower() or "avatar" in match.lower() or "profile" in match.lower():
+                    if "default-share" not in match and "empty" not in match.lower() and ("ltrbxd.com" in match or "s3" in match or "amazonaws.com" in match):
+                        # Prefer person-image or avatar URLs, but accept any valid image
+                        # Check if it looks like a person profile (not a film poster)
+                        if "person" in match.lower() or "avatar" in match.lower() or "profile" in match.lower() or "actor" in match.lower() or "director" in match.lower():
                             print(f"[FETCH_PERSON_IMAGE] Found script person img for {person_name}: {match}", flush=True)
                             return match
             
@@ -999,7 +1037,7 @@ class LetterboxdScraper:
                             img_url = "https:" + img_url
                         elif img_url.startswith("/"):
                             img_url = "https://letterboxd.com" + img_url
-                        if img_url and "default-share" not in img_url and ("ltrbxd.com" in img_url or "s3" in img_url or "amazonaws.com" in img_url):
+                        if img_url and "default-share" not in img_url and "empty" not in img_url.lower() and ("ltrbxd.com" in img_url or "s3" in img_url or "amazonaws.com" in img_url):
                             print(f"[FETCH_PERSON_IMAGE] Found named img for {person_name}: {img_url}", flush=True)
                             return img_url
             
