@@ -321,11 +321,8 @@ async def run_scrape(username: str, year):
         # Day of week stats
         'day_of_week': day_stats,
         
-        # Top rewatched movies (max 3, only movies watched more than once)
-        'top_rewatched': [
-            {"movie": item["movie"], "count": item["count"]}
-            for item in stats_collector.top_rewatched(3)
-        ],
+        # Top rewatched movies (max 3, only movies watched more than once) - includes poster_url
+        'top_rewatched': stats_collector.top_rewatched(3),
         
         # Most watched (by count)
         'most_watched': {
@@ -404,6 +401,9 @@ async def run_scrape(username: str, year):
         
         # Average rating
         'average_rating': stats_collector.get_average_rating(),
+        
+        # Milestones (1st, 50th, 100th, 250th, 500th film)
+        'milestones': stats_collector.get_milestones(),
     }
     
     return result
