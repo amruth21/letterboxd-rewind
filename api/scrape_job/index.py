@@ -11,13 +11,43 @@ from http.server import BaseHTTPRequestHandler
 from pathlib import Path
 
 # Add src directory to path
+print("[PYTHON FUNCTION] Initializing module paths...", flush=True)
 project_root = Path(__file__).parent.parent.parent
 src_path = project_root / "src"
-sys.path.insert(0, str(src_path))
+print(f"[PYTHON FUNCTION] Project root: {project_root}", flush=True)
+print(f"[PYTHON FUNCTION] Source path: {src_path}", flush=True)
+print(f"[PYTHON FUNCTION] Source path exists: {src_path.exists()}", flush=True)
 
-from scraper import LetterboxdScraper
-from storage import FilmDataStorage
-from stats import StatCollector
+# Try alternative paths if the default doesn't work
+if not src_path.exists():
+    print("[PYTHON FUNCTION] Default src path doesn't exist, trying alternatives...", flush=True)
+    # Try relative to current file
+    alt_src_path = Path(__file__).parent.parent / "src"
+    print(f"[PYTHON FUNCTION] Trying alternative path: {alt_src_path}", flush=True)
+    if alt_src_path.exists():
+        src_path = alt_src_path
+        print(f"[PYTHON FUNCTION] Using alternative path: {src_path}", flush=True)
+    else:
+        # Try from current working directory
+        alt_src_path = Path.cwd() / "src"
+        print(f"[PYTHON FUNCTION] Trying CWD path: {alt_src_path}", flush=True)
+        if alt_src_path.exists():
+            src_path = alt_src_path
+            print(f"[PYTHON FUNCTION] Using CWD path: {src_path}", flush=True)
+
+sys.path.insert(0, str(src_path))
+print(f"[PYTHON FUNCTION] Added to sys.path: {src_path}", flush=True)
+print(f"[PYTHON FUNCTION] Current sys.path: {sys.path[:3]}", flush=True)
+
+try:
+    from scraper import LetterboxdScraper
+    from storage import FilmDataStorage
+    from stats import StatCollector
+    print("[PYTHON FUNCTION] Successfully imported all modules", flush=True)
+except ImportError as e:
+    print(f"[PYTHON FUNCTION] Import error: {e}", flush=True)
+    print(f"[PYTHON FUNCTION] Available files in src_path: {list(src_path.glob('*.py')) if src_path.exists() else 'path does not exist'}", flush=True)
+    raise
 
 
 def format_metric_stats(collector: StatCollector, metric_name: str, n: int = 10):
@@ -49,6 +79,7 @@ async def run_scrape(username: str, year):
     Returns:
         Dictionary with all stats and timing metrics
     """
+    print(f"[RUN_SCRAPE] Starting scrape for username='{username}', year={year}", flush=True)
     # Initialize timing metrics
     timing = {
         'total_time': 0.0,
@@ -245,6 +276,8 @@ async def run_scrape(username: str, year):
     
     # Calculate total time
     timing['total_time'] = time.time() - total_start
+    print(f"[RUN_SCRAPE] Total scrape time: {timing['total_time']:.2f}s", flush=True)
+    print(f"[RUN_SCRAPE] Total films: {len(films)}, Unique films: {len(stats_collector.df_unique)}", flush=True)
     
     # Round all timing values for cleaner output
     for key in timing:
@@ -384,55 +417,100 @@ class handler(BaseHTTPRequestHandler):
     
     def do_POST(self):
         """Handle POST requests"""
+        print("[PYTHON FUNCTION] POST request received", flush=True)
+        print(f"[PYTHON FUNCTION] Request path: {self.path}", flush=True)
+        print(f"[PYTHON FUNCTION] Request headers: {dict(self.headers)}", flush=True)
+        
         try:
             # Read request body
             content_length = int(self.headers.get('Content-Length', 0))
+            print(f"[PYTHON FUNCTION] Content-Length: {content_length}", flush=True)
+            
             body = self.rfile.read(content_length).decode('utf-8')
+            print(f"[PYTHON FUNCTION] Request body received: {body[:200]}...", flush=True)
             
             # Parse JSON body
             try:
                 body_data = json.loads(body)
-            except json.JSONDecodeError:
+                print(f"[PYTHON FUNCTION] Parsed JSON body: username={body_data.get('username')}, year={body_data.get('year')}", flush=True)
+            except json.JSONDecodeError as e:
+                print(f"[PYTHON FUNCTION] JSON decode error: {e}", flush=True)
                 self.send_error_response(400, {'success': False, 'error': 'Invalid JSON in request body'})
                 return
             
             username = body_data.get('username', '')
             year = body_data.get('year', 2025)
             
+            print(f"[PYTHON FUNCTION] Extracted values: username='{username}', year={year} (type: {type(year)})", flush=True)
+            
             # Validate inputs
             if not username:
+                print("[PYTHON FUNCTION] Validation failed: username is empty", flush=True)
                 self.send_error_response(400, {'success': False, 'error': 'Username is required'})
                 return
             
             # Accept "ALL" or numeric year
             if isinstance(year, str) and year.upper() == "ALL":
                 year = "ALL"
+                print("[PYTHON FUNCTION] Year set to 'ALL'", flush=True)
             elif not isinstance(year, (int, str)) or (isinstance(year, str) and year.upper() != "ALL"):
                 try:
                     year = int(year)
-                except (ValueError, TypeError):
+                    print(f"[PYTHON FUNCTION] Year converted to int: {year}", flush=True)
+                except (ValueError, TypeError) as e:
+                    print(f"[PYTHON FUNCTION] Year conversion error: {e}", flush=True)
                     self.send_error_response(400, {'success': False, 'error': 'Year must be a number or "ALL"'})
                     return
             
             if year != "ALL":
                 try:
                     year = int(year)
-                except (ValueError, TypeError):
+                    print(f"[PYTHON FUNCTION] Year validated as int: {year}", flush=True)
+                except (ValueError, TypeError) as e:
+                    print(f"[PYTHON FUNCTION] Year validation error: {e}", flush=True)
                     self.send_error_response(400, {'success': False, 'error': 'Year must be a valid number'})
                     return
             
+            print(f"[PYTHON FUNCTION] Starting scrape for username='{username}', year={year}", flush=True)
+            scrape_start_time = time.time()
+            
             # Run async scraping function
-            result = asyncio.run(run_scrape(username, year))
+            try:
+                result = asyncio.run(run_scrape(username, year))
+                scrape_duration = time.time() - scrape_start_time
+                print(f"[PYTHON FUNCTION] Scrape completed in {scrape_duration:.2f}s, success: {result.get('success', False)}", flush=True)
+                
+                # Check if result is too large to log
+                result_str = json.dumps(result)
+                result_size = len(result_str)
+                print(f"[PYTHON FUNCTION] Result size: {result_size} bytes", flush=True)
+                if result_size > 10000:
+                    print(f"[PYTHON FUNCTION] Result preview: {result_str[:500]}...", flush=True)
+                else:
+                    print(f"[PYTHON FUNCTION] Result: {result_str}", flush=True)
+                
+            except Exception as scrape_error:
+                import traceback
+                scrape_duration = time.time() - scrape_start_time
+                print(f"[PYTHON FUNCTION] Scrape failed after {scrape_duration:.2f}s: {scrape_error}", flush=True)
+                print(f"[PYTHON FUNCTION] Traceback: {traceback.format_exc()}", flush=True)
+                raise
             
             # Send success response
+            print("[PYTHON FUNCTION] Sending success response", flush=True)
             self.send_response(200)
             self.send_header('Content-Type', 'application/json')
             self.send_header('Access-Control-Allow-Origin', '*')
             self.end_headers()
-            self.wfile.write(json.dumps(result).encode('utf-8'))
+            
+            response_json = json.dumps(result)
+            self.wfile.write(response_json.encode('utf-8'))
+            print(f"[PYTHON FUNCTION] Response sent successfully ({len(response_json)} bytes)", flush=True)
             
         except Exception as e:
             import traceback
+            print(f"[PYTHON FUNCTION] Exception occurred: {e}", flush=True)
+            print(f"[PYTHON FUNCTION] Traceback: {traceback.format_exc()}", flush=True)
             error_response = {
                 'success': False,
                 'error': str(e),
