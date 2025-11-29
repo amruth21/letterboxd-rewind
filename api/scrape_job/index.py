@@ -277,21 +277,25 @@ async def run_scrape(username: str, year):
     if top_actor_list:
         top_actor_name = top_actor_list[0][0]
         try:
-            image_scraper = LetterboxdScraper(username=username, year=2024, request_delay=0.1)
+            image_scraper = LetterboxdScraper(username=username, year=year, request_delay=0.1)
             top_actor_image_url = await image_scraper.fetch_person_image("actor", top_actor_name)
             print(f"[RUN_SCRAPE] Top actor image for {top_actor_name}: {top_actor_image_url}", flush=True)
         except Exception as e:
             print(f"[RUN_SCRAPE] Error fetching actor image: {e}", flush=True)
+            import traceback
+            print(f"[RUN_SCRAPE] Traceback: {traceback.format_exc()}", flush=True)
     
     if top_director_list:
         top_director_name = top_director_list[0][0]
         try:
             if 'image_scraper' not in locals():
-                image_scraper = LetterboxdScraper(username=username, year=2024, request_delay=0.1)
+                image_scraper = LetterboxdScraper(username=username, year=year, request_delay=0.1)
             top_director_image_url = await image_scraper.fetch_person_image("director", top_director_name)
             print(f"[RUN_SCRAPE] Top director image for {top_director_name}: {top_director_image_url}", flush=True)
         except Exception as e:
             print(f"[RUN_SCRAPE] Error fetching director image: {e}", flush=True)
+            import traceback
+            print(f"[RUN_SCRAPE] Traceback: {traceback.format_exc()}", flush=True)
     
     print(f"[RUN_SCRAPE] Image fetching completed in {time.time() - image_fetch_start:.2f}s", flush=True)
     
@@ -350,6 +354,14 @@ async def run_scrape(username: str, year):
         # Top #1 actor and director profile images (for display)
         'top_actor_image_url': top_actor_image_url,
         'top_director_image_url': top_director_image_url,
+    }
+    
+    # Debug: Print image URLs before returning
+    print(f"[RUN_SCRAPE] Final response - top_actor_image_url: {top_actor_image_url}", flush=True)
+    print(f"[RUN_SCRAPE] Final response - top_director_image_url: {top_director_image_url}", flush=True)
+    
+    # Merge additional fields into result dictionary
+    result.update({
         'cinematographers': format_metric_stats(stats_collector, "Cinematographers", 10),
         'studios': format_metric_stats(stats_collector, "Studios", 10),
         'languages': format_metric_stats(stats_collector, "Languages", 10),
@@ -440,7 +452,7 @@ async def run_scrape(username: str, year):
         
         # Milestones (1st, 50th, 100th, 250th, 500th film)
         'milestones': stats_collector.get_milestones(),
-    }
+    })
     
     return result
 

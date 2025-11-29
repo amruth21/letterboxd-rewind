@@ -120,6 +120,14 @@ export default function Home() {
 
       setResponse(data)
       
+      // Debug logging
+      console.log('[Home] API Response received:', {
+        top_actor_image_url: data.top_actor_image_url,
+        top_director_image_url: data.top_director_image_url,
+        has_actors: !!data.actors,
+        has_directors: !!data.directors,
+      })
+      
       // Scroll to stats after a brief delay
       setTimeout(() => {
         if (scrollContainerRef.current) {

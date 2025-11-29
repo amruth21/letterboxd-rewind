@@ -25,6 +25,12 @@ export default function TopRatedList({ title, items, itemsWithImages, topImageUr
   const ref = useRef(null)
   const isInView = useInView(ref, { once: true, margin: '-10%' })
   
+  // Debug logging
+  if (process.env.NODE_ENV === 'development') {
+    console.log(`[TopRatedList] ${title} - topImageUrl:`, topImageUrl)
+    console.log(`[TopRatedList] ${title} - items:`, items.slice(0, 3))
+  }
+  
   const displayItems = items.slice(0, maxItems)
 
   if (displayItems.length === 0) {
@@ -74,14 +80,14 @@ export default function TopRatedList({ title, items, itemsWithImages, topImageUr
   }
 
   return (
-    <div className="flex gap-6 items-start">
-      {/* Large image for #1 */}
+    <div className="flex gap-8 items-center">
+      {/* Large image for #1 - positioned to the left and centered */}
       {topImageUrl && displayItems.length > 0 && (
         <motion.div
           initial={{ opacity: 0, scale: 0.8, x: -30 }}
           animate={isInView ? { opacity: 1, scale: 1, x: 0 } : { opacity: 0, scale: 0.8, x: -30 }}
           transition={{ delay: 0.3, type: 'spring', bounce: 0.4 }}
-          className="shrink-0"
+          className="shrink-0 self-center"
         >
           <img
             src={topImageUrl}
