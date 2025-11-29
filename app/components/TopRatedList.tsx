@@ -15,32 +15,17 @@ interface TopRatedListProps {
   title: string
   items: TopRatedItem[]
   itemsWithImages?: TopRatedItem[]
+  topImageUrl?: string | null
   maxItems?: number
   color: string
   icon?: string
 }
 
-export default function TopRatedList({ title, items, itemsWithImages, maxItems = 5, color, icon = '🎬' }: TopRatedListProps) {
+export default function TopRatedList({ title, items, itemsWithImages, topImageUrl, maxItems = 5, color, icon = '🎬' }: TopRatedListProps) {
   const ref = useRef(null)
   const isInView = useInView(ref, { once: true, margin: '-10%' })
   
-  // Merge image data with items
-  const displayItems = items.slice(0, maxItems).map((item, idx) => {
-    const imageData = itemsWithImages?.find(img => img.name === item.name)
-    const merged = {
-      ...item,
-      image_url: imageData?.image_url || null
-    }
-    // Debug logging
-    if (process.env.NODE_ENV === 'development') {
-      if (imageData) {
-        console.log(`[TopRatedList] Found image for ${item.name}:`, imageData.image_url)
-      } else {
-        console.log(`[TopRatedList] No image data found for ${item.name}`, { itemsWithImages: itemsWithImages?.map(i => i.name) })
-      }
-    }
-    return merged
-  })
+  const displayItems = items.slice(0, maxItems)
 
   if (displayItems.length === 0) {
     return (
@@ -89,14 +74,33 @@ export default function TopRatedList({ title, items, itemsWithImages, maxItems =
   }
 
   return (
-    <motion.div 
-      ref={ref}
-      className="space-y-3"
-      variants={containerVariants}
-      initial="hidden"
-      animate={isInView ? "visible" : "hidden"}
-    >
-      {displayItems.map((item, index) => (
+    <div className="flex gap-6 items-start">
+      {/* Large image for #1 */}
+      {topImageUrl && displayItems.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8, x: -30 }}
+          animate={isInView ? { opacity: 1, scale: 1, x: 0 } : { opacity: 0, scale: 0.8, x: -30 }}
+          transition={{ delay: 0.3, type: 'spring', bounce: 0.4 }}
+          className="shrink-0"
+        >
+          <img
+            src={topImageUrl}
+            alt={displayItems[0].name}
+            className="w-48 h-48 rounded-full object-cover border-4 shadow-2xl"
+            style={{ borderColor: `${color}60` }}
+          />
+        </motion.div>
+      )}
+      
+      {/* Rankings list */}
+      <motion.div 
+        ref={ref}
+        className="flex-1 space-y-3"
+        variants={containerVariants}
+        initial="hidden"
+        animate={isInView ? "visible" : "hidden"}
+      >
+        {displayItems.map((item, index) => (
         <motion.div
           key={item.name}
           variants={itemVariants}
@@ -120,30 +124,6 @@ export default function TopRatedList({ title, items, itemsWithImages, maxItems =
             >
               {index + 1}
             </motion.div>
-            
-            {/* Profile Image */}
-            {item.image_url ? (
-              <motion.div
-                className="w-10 h-10 rounded-full overflow-hidden shrink-0 border-2"
-                style={{ borderColor: `${color}50` }}
-                initial={{ scale: 0, opacity: 0 }}
-                animate={isInView ? { scale: 1, opacity: 1 } : { scale: 0, opacity: 0 }}
-                transition={{ delay: 0.25 + index * 0.1, type: 'spring', bounce: 0.4 }}
-              >
-                <img 
-                  src={item.image_url} 
-                  alt={item.name}
-                  className="w-full h-full object-cover"
-                />
-              </motion.div>
-            ) : (
-              <div 
-                className="w-10 h-10 rounded-full shrink-0 flex items-center justify-center text-lg"
-                style={{ backgroundColor: `${color}15` }}
-              >
-                {icon}
-              </div>
-            )}
             
             {/* Name */}
             <div className="flex-1 min-w-0">
@@ -187,6 +167,7 @@ export default function TopRatedList({ title, items, itemsWithImages, maxItems =
           </div>
         </motion.div>
       ))}
-    </motion.div>
+      </motion.div>
+    </div>
   )
 }

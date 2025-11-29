@@ -263,36 +263,37 @@ async def run_scrape(username: str, year):
     
     timing['stats_calculation_time'] = time.time() - stats_start
     
-    # Fetch images for top actors and directors (top 5 each)
-    print("[RUN_SCRAPE] Fetching actor/director images...", flush=True)
+    # Fetch images for #1 actor and director only
+    print("[RUN_SCRAPE] Fetching #1 actor/director images...", flush=True)
     image_fetch_start = time.time()
     
-    # Get top 5 actors and directors for image fetching
-    top_actors_for_images = [
-        {"name": item, "score": float(score), "count": count, "avg_rating": float(avg)}
-        for item, score, count, avg in stats_collector.top_by_weighted_average("Actors", 5)
-    ]
-    top_directors_for_images = [
-        {"name": item, "score": float(score), "count": count, "avg_rating": float(avg)}
-        for item, score, count, avg in stats_collector.top_by_weighted_average("Directors", 5)
-    ]
+    # Get top 1 actor and director for image fetching
+    top_actor_list = stats_collector.top_by_weighted_average("Actors", 1)
+    top_director_list = stats_collector.top_by_weighted_average("Directors", 1)
     
-    # Use the scraper to fetch images (already in async context, so use await)
-    try:
-        image_scraper = LetterboxdScraper(username=username, year=2024, request_delay=0.1)
-        top_actors_with_images = await image_scraper.fetch_person_images(top_actors_for_images, "actor", max_concurrency=5)
-        top_directors_with_images = await image_scraper.fetch_person_images(top_directors_for_images, "director", max_concurrency=5)
-        
-        print(f"[RUN_SCRAPE] Image fetching completed in {time.time() - image_fetch_start:.2f}s", flush=True)
-        print(f"[RUN_SCRAPE] Actors with images: {[a.get('name') + ':' + str(bool(a.get('image_url'))) for a in top_actors_with_images]}", flush=True)
-        print(f"[RUN_SCRAPE] Directors with images: {[d.get('name') + ':' + str(bool(d.get('image_url'))) for d in top_directors_with_images]}", flush=True)
-    except Exception as e:
-        print(f"[RUN_SCRAPE] Error fetching images: {e}", flush=True)
-        import traceback
-        print(f"[RUN_SCRAPE] Traceback: {traceback.format_exc()}", flush=True)
-        # Return empty image data on error
-        top_actors_with_images = top_actors_for_images
-        top_directors_with_images = top_directors_for_images
+    top_actor_image_url = None
+    top_director_image_url = None
+    
+    if top_actor_list:
+        top_actor_name = top_actor_list[0][0]
+        try:
+            image_scraper = LetterboxdScraper(username=username, year=2024, request_delay=0.1)
+            top_actor_image_url = await image_scraper.fetch_person_image("actor", top_actor_name)
+            print(f"[RUN_SCRAPE] Top actor image for {top_actor_name}: {top_actor_image_url}", flush=True)
+        except Exception as e:
+            print(f"[RUN_SCRAPE] Error fetching actor image: {e}", flush=True)
+    
+    if top_director_list:
+        top_director_name = top_director_list[0][0]
+        try:
+            if 'image_scraper' not in locals():
+                image_scraper = LetterboxdScraper(username=username, year=2024, request_delay=0.1)
+            top_director_image_url = await image_scraper.fetch_person_image("director", top_director_name)
+            print(f"[RUN_SCRAPE] Top director image for {top_director_name}: {top_director_image_url}", flush=True)
+        except Exception as e:
+            print(f"[RUN_SCRAPE] Error fetching director image: {e}", flush=True)
+    
+    print(f"[RUN_SCRAPE] Image fetching completed in {time.time() - image_fetch_start:.2f}s", flush=True)
     
     # Convert DataFrame to list of dicts for CSV export
     # Convert Timestamp objects to strings and handle NaN values for JSON serialization
@@ -346,9 +347,9 @@ async def run_scrape(username: str, year):
         'actors': format_metric_stats(stats_collector, "Actors", 10),
         'directors': format_metric_stats(stats_collector, "Directors", 10),
         
-        # Top actors and directors with profile images (for display)
-        'top_actors_with_images': top_actors_with_images,
-        'top_directors_with_images': top_directors_with_images,
+        # Top #1 actor and director profile images (for display)
+        'top_actor_image_url': top_actor_image_url,
+        'top_director_image_url': top_director_image_url,
         'cinematographers': format_metric_stats(stats_collector, "Cinematographers", 10),
         'studios': format_metric_stats(stats_collector, "Studios", 10),
         'languages': format_metric_stats(stats_collector, "Languages", 10),

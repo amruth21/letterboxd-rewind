@@ -841,47 +841,64 @@ class LetterboxdScraper:
             
             soup = BeautifulSoup(html, "html.parser")
             
-            # Look for the person's avatar/image - typically in og:image meta tag
-            og_image = soup.find("meta", attrs={"property": "og:image"})
-            if og_image and og_image.get("content"):
-                img_url = og_image["content"]
-                # Convert relative URLs to absolute
-                if img_url.startswith("//"):
-                    img_url = "https:" + img_url
-                elif img_url.startswith("/"):
-                    img_url = "https://letterboxd.com" + img_url
-                # Return if it's a valid image URL
-                if img_url and ("ltrbxd.com" in img_url or "letterboxd.com" in img_url or "s3" in img_url or "amazonaws.com" in img_url):
-                    print(f"[FETCH_PERSON_IMAGE] Found og:image for {person_name}: {img_url}", flush=True)
-                    return img_url
+            # Skip og:image as it's usually the default share image, not the profile photo
+            # Look for the actual profile photo - check multiple possible locations
             
-            # Alternative: look for avatar in the page
+            # Method 1: Look for profile photo in the header section
+            profile_section = soup.find("section", class_="profile-header") or soup.find("div", class_="profile-header")
+            if profile_section:
+                profile_img = profile_section.find("img")
+                if profile_img:
+                    img_url = profile_img.get("src") or profile_img.get("data-src") or profile_img.get("data-original")
+                    if img_url:
+                        if img_url.startswith("//"):
+                            img_url = "https:" + img_url
+                        elif img_url.startswith("/"):
+                            img_url = "https://letterboxd.com" + img_url
+                        # Skip default images
+                        if img_url and "default-share" not in img_url and ("ltrbxd.com" in img_url or "s3" in img_url or "amazonaws.com" in img_url):
+                            print(f"[FETCH_PERSON_IMAGE] Found profile header img for {person_name}: {img_url}", flush=True)
+                            return img_url
+            
+            # Method 2: Look for avatar class (but skip if it's the default)
             avatar = soup.find("img", class_="avatar")
             if avatar:
-                img_url = avatar.get("src") or avatar.get("data-src")
+                img_url = avatar.get("src") or avatar.get("data-src") or avatar.get("data-original")
                 if img_url:
-                    # Convert relative URLs to absolute
                     if img_url.startswith("//"):
                         img_url = "https:" + img_url
                     elif img_url.startswith("/"):
                         img_url = "https://letterboxd.com" + img_url
-                    if img_url and ("ltrbxd.com" in img_url or "letterboxd.com" in img_url or "s3" in img_url or "amazonaws.com" in img_url):
+                    # Skip default images
+                    if img_url and "default-share" not in img_url and ("ltrbxd.com" in img_url or "s3" in img_url or "amazonaws.com" in img_url):
                         print(f"[FETCH_PERSON_IMAGE] Found avatar img for {person_name}: {img_url}", flush=True)
                         return img_url
             
-            # Also try looking for profile image in various other locations
-            profile_img = soup.find("img", attrs={"alt": lambda x: x and person_name.lower() in x.lower()})
-            if profile_img:
-                img_url = profile_img.get("src") or profile_img.get("data-src")
-                if img_url:
-                    # Convert relative URLs to absolute
-                    if img_url.startswith("//"):
-                        img_url = "https:" + img_url
-                    elif img_url.startswith("/"):
-                        img_url = "https://letterboxd.com" + img_url
-                    if img_url and ("ltrbxd.com" in img_url or "letterboxd.com" in img_url or "s3" in img_url or "amazonaws.com" in img_url):
-                        print(f"[FETCH_PERSON_IMAGE] Found profile img for {person_name}: {img_url}", flush=True)
-                        return img_url
+            # Method 3: Look in script tags for profile image data (like we do for film posters)
+            for script in soup.find_all("script"):
+                text = script.string or ""
+                # Look for profile image patterns in JSON-LD or other data
+                matches = re.findall(r'https://[^"\'<>\s]*\.(?:jpg|jpeg|png|webp)', text, re.IGNORECASE)
+                for match in matches:
+                    if "default-share" not in match and ("ltrbxd.com" in match or "s3" in match or "amazonaws.com" in match):
+                        print(f"[FETCH_PERSON_IMAGE] Found script img for {person_name}: {match}", flush=True)
+                        return match
+            
+            # Method 4: Look for any img with the person's name in alt or title
+            for img in soup.find_all("img"):
+                alt = img.get("alt", "").lower()
+                title = img.get("title", "").lower()
+                name_lower = person_name.lower()
+                if name_lower in alt or name_lower in title:
+                    img_url = img.get("src") or img.get("data-src") or img.get("data-original")
+                    if img_url:
+                        if img_url.startswith("//"):
+                            img_url = "https:" + img_url
+                        elif img_url.startswith("/"):
+                            img_url = "https://letterboxd.com" + img_url
+                        if img_url and "default-share" not in img_url and ("ltrbxd.com" in img_url or "s3" in img_url or "amazonaws.com" in img_url):
+                            print(f"[FETCH_PERSON_IMAGE] Found named img for {person_name}: {img_url}", flush=True)
+                            return img_url
             
             print(f"[FETCH_PERSON_IMAGE] No image found for {person_name}", flush=True)
             return None

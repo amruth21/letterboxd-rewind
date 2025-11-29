@@ -599,11 +599,11 @@ export default function Home() {
                 {/* Frame 8: Top Actors by Rating */}
                 {response.actors?.weighted && response.actors.weighted.length > 0 && (
                   <FilmFrame frameNumber={8} title="Your Favorite Actors">
-                    <div className="w-full max-w-md">
+                    <div className="w-full max-w-2xl">
                       <TopRatedList
                         title="Actors"
                         items={response.actors.weighted.slice(0, 5)}
-                        itemsWithImages={response.top_actors_with_images}
+                        topImageUrl={response.top_actor_image_url}
                         color="#0ae053"
                         icon="⭐"
                       />
@@ -614,11 +614,11 @@ export default function Home() {
                 {/* Frame 9: Top Directors by Rating */}
                 {response.directors?.weighted && response.directors.weighted.length > 0 && (
                   <FilmFrame frameNumber={9} title="Your Favorite Directors">
-                    <div className="w-full max-w-md">
+                    <div className="w-full max-w-2xl">
                       <TopRatedList
                         title="Directors"
                         items={response.directors.weighted.slice(0, 5)}
-                        itemsWithImages={response.top_directors_with_images}
+                        topImageUrl={response.top_director_image_url}
                         color="#41bcf4"
                         icon="🎬"
                       />
