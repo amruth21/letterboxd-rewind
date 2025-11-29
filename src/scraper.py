@@ -806,3 +806,87 @@ class LetterboxdScraper:
     def get_stats(self) -> dict:
         """Return a shallow copy of current runtime stats."""
         return dict(self.stats)
+
+    async def fetch_person_image(self, person_type: str, person_name: str) -> Optional[str]:
+        """
+        Fetch the profile image for an actor or director from their Letterboxd page.
+        
+        Args:
+            person_type: Either "actor" or "director"
+            person_name: Name of the person (will be URL-slugified)
+            
+        Returns:
+            Image URL or None if not found
+        """
+        # Convert name to URL slug (e.g., "Ellen Burstyn" -> "ellen-burstyn")
+        slug = person_name.lower().replace(" ", "-").replace("'", "").replace(".", "")
+        # Remove any non-alphanumeric characters except hyphens
+        slug = re.sub(r'[^a-z0-9\-]', '', slug)
+        
+        url = f"https://letterboxd.com/{person_type}/{slug}/"
+        
+        try:
+            if AIOHTTP_AVAILABLE:
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as resp:
+                        if resp.status != 200:
+                            return None
+                        html = await resp.text()
+            else:
+                resp = requests.get(url, timeout=10)
+                if resp.status_code != 200:
+                    return None
+                html = resp.text
+            
+            soup = BeautifulSoup(html, "html.parser")
+            
+            # Look for the person's avatar/image - typically in og:image meta tag
+            og_image = soup.find("meta", attrs={"property": "og:image"})
+            if og_image and og_image.get("content"):
+                img_url = og_image["content"]
+                # Filter out default/placeholder images
+                if "avatar" in img_url.lower() or "static" not in img_url:
+                    return img_url
+            
+            # Alternative: look for avatar in the page
+            avatar = soup.find("img", class_="avatar")
+            if avatar and avatar.get("src"):
+                return avatar["src"]
+            
+            return None
+            
+        except Exception as e:
+            return None
+
+    async def fetch_person_images(self, persons: List[dict], person_type: str, max_concurrency: int = 5) -> List[dict]:
+        """
+        Fetch images for multiple actors or directors concurrently.
+        
+        Args:
+            persons: List of dicts with 'name' key
+            person_type: Either "actor" or "director"
+            max_concurrency: Max concurrent requests
+            
+        Returns:
+            Same list with 'image_url' added to each dict
+        """
+        semaphore = asyncio.Semaphore(max_concurrency)
+        
+        async def fetch_with_semaphore(person: dict) -> dict:
+            async with semaphore:
+                name = person.get("name", "")
+                image_url = await self.fetch_person_image(person_type, name)
+                return {**person, "image_url": image_url}
+        
+        tasks = [fetch_with_semaphore(p) for p in persons]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        
+        # Handle any exceptions by returning original dict without image
+        final_results = []
+        for i, result in enumerate(results):
+            if isinstance(result, Exception):
+                final_results.append({**persons[i], "image_url": None})
+            else:
+                final_results.append(result)
+        
+        return final_results

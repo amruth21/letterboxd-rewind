@@ -8,20 +8,30 @@ interface TopRatedItem {
   score: number
   count: number
   avg_rating: number
+  image_url?: string | null
 }
 
 interface TopRatedListProps {
   title: string
   items: TopRatedItem[]
+  itemsWithImages?: TopRatedItem[]
   maxItems?: number
   color: string
   icon?: string
 }
 
-export default function TopRatedList({ title, items, maxItems = 5, color, icon = '🎬' }: TopRatedListProps) {
+export default function TopRatedList({ title, items, itemsWithImages, maxItems = 5, color, icon = '🎬' }: TopRatedListProps) {
   const ref = useRef(null)
   const isInView = useInView(ref, { once: true, margin: '-10%' })
-  const displayItems = items.slice(0, maxItems)
+  
+  // Merge image data with items
+  const displayItems = items.slice(0, maxItems).map((item, idx) => {
+    const imageData = itemsWithImages?.find(img => img.name === item.name)
+    return {
+      ...item,
+      image_url: imageData?.image_url || null
+    }
+  })
 
   if (displayItems.length === 0) {
     return (
@@ -93,7 +103,7 @@ export default function TopRatedList({ title, items, maxItems = 5, color, icon =
           >
             {/* Rank with animation */}
             <motion.div 
-              className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold"
+              className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0"
               style={{ backgroundColor: `${color}20`, color: color }}
               initial={{ scale: 0, rotate: -180 }}
               animate={isInView ? { scale: 1, rotate: 0 } : { scale: 0, rotate: -180 }}
@@ -101,6 +111,30 @@ export default function TopRatedList({ title, items, maxItems = 5, color, icon =
             >
               {index + 1}
             </motion.div>
+            
+            {/* Profile Image */}
+            {item.image_url ? (
+              <motion.div
+                className="w-10 h-10 rounded-full overflow-hidden shrink-0 border-2"
+                style={{ borderColor: `${color}50` }}
+                initial={{ scale: 0, opacity: 0 }}
+                animate={isInView ? { scale: 1, opacity: 1 } : { scale: 0, opacity: 0 }}
+                transition={{ delay: 0.25 + index * 0.1, type: 'spring', bounce: 0.4 }}
+              >
+                <img 
+                  src={item.image_url} 
+                  alt={item.name}
+                  className="w-full h-full object-cover"
+                />
+              </motion.div>
+            ) : (
+              <div 
+                className="w-10 h-10 rounded-full shrink-0 flex items-center justify-center text-lg"
+                style={{ backgroundColor: `${color}15` }}
+              >
+                {icon}
+              </div>
+            )}
             
             {/* Name */}
             <div className="flex-1 min-w-0">

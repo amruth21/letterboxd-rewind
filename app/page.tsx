@@ -603,6 +603,7 @@ export default function Home() {
                       <TopRatedList
                         title="Actors"
                         items={response.actors.weighted.slice(0, 5)}
+                        itemsWithImages={response.top_actors_with_images}
                         color="#0ae053"
                         icon="⭐"
                       />
@@ -617,6 +618,7 @@ export default function Home() {
                       <TopRatedList
                         title="Directors"
                         items={response.directors.weighted.slice(0, 5)}
+                        itemsWithImages={response.top_directors_with_images}
                         color="#41bcf4"
                         icon="🎬"
                       />

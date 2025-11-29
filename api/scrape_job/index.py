@@ -263,6 +263,43 @@ async def run_scrape(username: str, year):
     
     timing['stats_calculation_time'] = time.time() - stats_start
     
+    # Fetch images for top actors and directors (top 5 each)
+    print("[RUN_SCRAPE] Fetching actor/director images...", flush=True)
+    image_fetch_start = time.time()
+    
+    # Get top 5 actors and directors for image fetching
+    top_actors_for_images = [
+        {"name": item, "score": float(score), "count": count, "avg_rating": float(avg)}
+        for item, score, count, avg in stats_collector.top_by_weighted_average("Actors", 5)
+    ]
+    top_directors_for_images = [
+        {"name": item, "score": float(score), "count": count, "avg_rating": float(avg)}
+        for item, score, count, avg in stats_collector.top_by_weighted_average("Directors", 5)
+    ]
+    
+    # Use the scraper to fetch images
+    image_scraper = LetterboxdScraper(username=username, year=2024, request_delay=0.1)
+    try:
+        top_actors_with_images = asyncio.get_event_loop().run_until_complete(
+            image_scraper.fetch_person_images(top_actors_for_images, "actor", max_concurrency=5)
+        )
+    except RuntimeError:
+        # If event loop is already running, create a new one
+        top_actors_with_images = asyncio.run(
+            image_scraper.fetch_person_images(top_actors_for_images, "actor", max_concurrency=5)
+        )
+    
+    try:
+        top_directors_with_images = asyncio.get_event_loop().run_until_complete(
+            image_scraper.fetch_person_images(top_directors_for_images, "director", max_concurrency=5)
+        )
+    except RuntimeError:
+        top_directors_with_images = asyncio.run(
+            image_scraper.fetch_person_images(top_directors_for_images, "director", max_concurrency=5)
+        )
+    
+    print(f"[RUN_SCRAPE] Image fetching completed in {time.time() - image_fetch_start:.2f}s", flush=True)
+    
     # Convert DataFrame to list of dicts for CSV export
     # Convert Timestamp objects to strings and handle NaN values for JSON serialization
     import numpy as np
@@ -314,6 +351,10 @@ async def run_scrape(username: str, year):
         'genres': format_metric_stats(stats_collector, "Genres", 10),
         'actors': format_metric_stats(stats_collector, "Actors", 10),
         'directors': format_metric_stats(stats_collector, "Directors", 10),
+        
+        # Top actors and directors with profile images (for display)
+        'top_actors_with_images': top_actors_with_images,
+        'top_directors_with_images': top_directors_with_images,
         'cinematographers': format_metric_stats(stats_collector, "Cinematographers", 10),
         'studios': format_metric_stats(stats_collector, "Studios", 10),
         'languages': format_metric_stats(stats_collector, "Languages", 10),
