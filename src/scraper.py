@@ -841,10 +841,83 @@ class LetterboxdScraper:
             
             soup = BeautifulSoup(html, "html.parser")
             
-            # Skip og:image as it's usually the default share image, not the profile photo
-            # Look for the actual profile photo - check multiple possible locations
+            # Method 1: Look for the specific div with classes "avatar person-image image-loaded"
+            # This is the primary location for person profile images
+            avatar_div = soup.find("div", class_=lambda x: x and "avatar" in x and "person-image" in x)
+            if avatar_div:
+                # The image might be inside the div as an img tag
+                img_tag = avatar_div.find("img")
+                if img_tag:
+                    img_url = img_tag.get("src") or img_tag.get("data-src") or img_tag.get("data-original") or img_tag.get("data-lazy-src")
+                    if img_url:
+                        if img_url.startswith("//"):
+                            img_url = "https:" + img_url
+                        elif img_url.startswith("/"):
+                            img_url = "https://letterboxd.com" + img_url
+                        # Skip default images
+                        if img_url and "default-share" not in img_url and ("ltrbxd.com" in img_url or "s3" in img_url or "amazonaws.com" in img_url):
+                            print(f"[FETCH_PERSON_IMAGE] Found avatar person-image div img for {person_name}: {img_url}", flush=True)
+                            return img_url
+                
+                # Check for img tag that is a sibling or nearby
+                # Sometimes the img is a sibling element
+                parent = avatar_div.parent
+                if parent:
+                    nearby_imgs = parent.find_all("img", limit=5)
+                    for nearby_img in nearby_imgs:
+                        img_url = nearby_img.get("src") or nearby_img.get("data-src") or nearby_img.get("data-original") or nearby_img.get("data-lazy-src")
+                        if img_url:
+                            if img_url.startswith("//"):
+                                img_url = "https:" + img_url
+                            elif img_url.startswith("/"):
+                                img_url = "https://letterboxd.com" + img_url
+                            if img_url and "default-share" not in img_url and ("ltrbxd.com" in img_url or "s3" in img_url or "amazonaws.com" in img_url):
+                                print(f"[FETCH_PERSON_IMAGE] Found nearby img to avatar div for {person_name}: {img_url}", flush=True)
+                                return img_url
+                
+                # Or the image might be in a style attribute (background-image)
+                style = avatar_div.get("style", "")
+                if style and "background-image" in style:
+                    # Extract URL from background-image: url(...)
+                    bg_match = re.search(r'url\(["\']?([^"\']+)["\']?\)', style)
+                    if bg_match:
+                        img_url = bg_match.group(1)
+                        if img_url.startswith("//"):
+                            img_url = "https:" + img_url
+                        elif img_url.startswith("/"):
+                            img_url = "https://letterboxd.com" + img_url
+                        if img_url and "default-share" not in img_url and ("ltrbxd.com" in img_url or "s3" in img_url or "amazonaws.com" in img_url):
+                            print(f"[FETCH_PERSON_IMAGE] Found avatar person-image div background-image for {person_name}: {img_url}", flush=True)
+                            return img_url
+                
+                # Or check data attributes on the div itself
+                img_url = avatar_div.get("data-src") or avatar_div.get("data-original") or avatar_div.get("data-lazy-src") or avatar_div.get("data-image")
+                if img_url:
+                    if img_url.startswith("//"):
+                        img_url = "https:" + img_url
+                    elif img_url.startswith("/"):
+                        img_url = "https://letterboxd.com" + img_url
+                    if img_url and "default-share" not in img_url and ("ltrbxd.com" in img_url or "s3" in img_url or "amazonaws.com" in img_url):
+                        print(f"[FETCH_PERSON_IMAGE] Found avatar person-image div data attribute for {person_name}: {img_url}", flush=True)
+                        return img_url
+                
+                # Check parent elements for data attributes
+                current = avatar_div.parent
+                depth = 0
+                while current and depth < 3:  # Check up to 3 levels up
+                    img_url = current.get("data-src") or current.get("data-original") or current.get("data-image") or current.get("data-person-image")
+                    if img_url:
+                        if img_url.startswith("//"):
+                            img_url = "https:" + img_url
+                        elif img_url.startswith("/"):
+                            img_url = "https://letterboxd.com" + img_url
+                        if img_url and "default-share" not in img_url and ("ltrbxd.com" in img_url or "s3" in img_url or "amazonaws.com" in img_url):
+                            print(f"[FETCH_PERSON_IMAGE] Found parent data attribute for {person_name}: {img_url}", flush=True)
+                            return img_url
+                    current = current.parent
+                    depth += 1
             
-            # Method 1: Look for profile photo in the header section
+            # Method 2: Look for profile photo in the header section
             profile_section = soup.find("section", class_="profile-header") or soup.find("div", class_="profile-header")
             if profile_section:
                 profile_img = profile_section.find("img")
@@ -860,7 +933,7 @@ class LetterboxdScraper:
                             print(f"[FETCH_PERSON_IMAGE] Found profile header img for {person_name}: {img_url}", flush=True)
                             return img_url
             
-            # Method 2: Look for avatar class (but skip if it's the default)
+            # Method 3: Look for avatar class img (but skip if it's the default)
             avatar = soup.find("img", class_="avatar")
             if avatar:
                 img_url = avatar.get("src") or avatar.get("data-src") or avatar.get("data-original")
@@ -874,17 +947,47 @@ class LetterboxdScraper:
                         print(f"[FETCH_PERSON_IMAGE] Found avatar img for {person_name}: {img_url}", flush=True)
                         return img_url
             
-            # Method 3: Look in script tags for profile image data (like we do for film posters)
+            # Method 4: Look in script tags for profile image data (like we do for film posters)
+            # Check for JSON-LD structured data or other embedded data
             for script in soup.find_all("script"):
                 text = script.string or ""
-                # Look for profile image patterns in JSON-LD or other data
+                if not text:
+                    continue
+                
+                # Look for JSON-LD with image property
+                try:
+                    if "application/ld+json" in script.get("type", ""):
+                        data = json.loads(text)
+                        if isinstance(data, dict):
+                            image = data.get("image") or data.get("thumbnailUrl")
+                            if image:
+                                if isinstance(image, str):
+                                    img_url = image
+                                elif isinstance(image, dict):
+                                    img_url = image.get("url") or image.get("@id")
+                                else:
+                                    continue
+                                if img_url and "default-share" not in img_url and ("ltrbxd.com" in img_url or "s3" in img_url or "amazonaws.com" in img_url):
+                                    if img_url.startswith("//"):
+                                        img_url = "https:" + img_url
+                                    elif img_url.startswith("/"):
+                                        img_url = "https://letterboxd.com" + img_url
+                                    print(f"[FETCH_PERSON_IMAGE] Found JSON-LD image for {person_name}: {img_url}", flush=True)
+                                    return img_url
+                except (json.JSONDecodeError, AttributeError):
+                    pass
+                
+                # Look for profile image patterns in other script data
+                # Pattern for person-image URLs (usually in a.ltrbxd.com or s.ltrbxd.com)
                 matches = re.findall(r'https://[^"\'<>\s]*\.(?:jpg|jpeg|png|webp)', text, re.IGNORECASE)
                 for match in matches:
                     if "default-share" not in match and ("ltrbxd.com" in match or "s3" in match or "amazonaws.com" in match):
-                        print(f"[FETCH_PERSON_IMAGE] Found script img for {person_name}: {match}", flush=True)
-                        return match
+                        # Prefer person-image or avatar URLs
+                        if "person" in match.lower() or "avatar" in match.lower() or "profile" in match.lower():
+                            print(f"[FETCH_PERSON_IMAGE] Found script person img for {person_name}: {match}", flush=True)
+                            return match
             
-            # Method 4: Look for any img with the person's name in alt or title
+            # Method 5: Look for any img with the person's name in alt or title
             for img in soup.find_all("img"):
                 alt = img.get("alt", "").lower()
                 title = img.get("title", "").lower()
