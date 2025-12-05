@@ -107,12 +107,13 @@ export default function FilmScrollbar({ scrollProgress, scrollContainerRef, isVi
         className="scrollbar-track"
         onMouseDown={handleMouseDown}
       >
-        {/* Film Perforations along the track */}
-        <div className="scrollbar-perforations">
-          {Array.from({ length: Math.floor(scrollbarWidth / 20) }).map((_, i) => (
-            <div key={i} className="scrollbar-perf" />
-          ))}
-        </div>
+        {/* Progress fill that matches the progress bar */}
+        <div 
+          className="scrollbar-progress-fill"
+          style={{
+            width: `${scrollProgress * 100}%`,
+          }}
+        />
         
         {/* Scrollbar Thumb */}
         <motion.div
@@ -133,16 +134,7 @@ export default function FilmScrollbar({ scrollProgress, scrollContainerRef, isVi
             dragStartScroll.current = container.scrollLeft
             setIsDragging(true)
           }}
-        >
-          {/* Film strip pattern on thumb */}
-          <div className="thumb-film-strip">
-            <div className="thumb-perforations">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="thumb-perf" />
-              ))}
-            </div>
-          </div>
-        </motion.div>
+        />
       </div>
     </motion.div>
   )

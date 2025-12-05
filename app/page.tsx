@@ -232,7 +232,7 @@ export default function Home() {
         <FilmScrollbar
           scrollProgress={scrollProgress}
           scrollContainerRef={scrollContainerRef}
-          isVisible={showReelWheel}
+          isVisible={true}
         />
       )}
 
