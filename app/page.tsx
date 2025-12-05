@@ -15,6 +15,7 @@ import WatchTimelineChart from './components/WatchTimelineChart'
 import AnimatedNumber from './components/AnimatedNumber'
 import HandwritingText from './components/HandwritingText'
 import DecadeChart from './components/DecadeChart'
+import FilmReelWheel from './components/FilmReelWheel'
 
 export default function Home() {
   const [loading, setLoading] = useState(false)
@@ -26,6 +27,7 @@ export default function Home() {
   const [showScrollHint, setShowScrollHint] = useState(true)
   const [showClapperboard, setShowClapperboard] = useState(false)
   const [transitionToStats, setTransitionToStats] = useState(false)
+  const [showReelWheel, setShowReelWheel] = useState(false)
   
   const scrollContainerRef = useRef<HTMLDivElement>(null)
 
@@ -55,6 +57,13 @@ export default function Home() {
       // Hide scroll hint after scrolling
       if (showScrollHint && container.scrollLeft > 50) {
         setShowScrollHint(false)
+      }
+      
+      // Show reel wheel after scrolling starts
+      if (container.scrollLeft > 50) {
+        setShowReelWheel(true)
+      } else {
+        setShowReelWheel(false)
       }
     }
 
@@ -216,6 +225,15 @@ export default function Home() {
             style={{ width: `${scrollProgress * 100}%` }}
           />
         </div>
+      )}
+
+      {/* Film Reel Scrolling Wheel */}
+      {response?.success && (
+        <FilmReelWheel
+          scrollProgress={scrollProgress}
+          scrollContainerRef={scrollContainerRef}
+          isVisible={showReelWheel}
+        />
       )}
 
       {/* Scroll Indicator */}
