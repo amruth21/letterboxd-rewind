@@ -15,7 +15,7 @@ import WatchTimelineChart from './components/WatchTimelineChart'
 import AnimatedNumber from './components/AnimatedNumber'
 import HandwritingText from './components/HandwritingText'
 import DecadeChart from './components/DecadeChart'
-import FilmReelWheel from './components/FilmReelWheel'
+import FilmScrollbar from './components/FilmScrollbar'
 
 export default function Home() {
   const [loading, setLoading] = useState(false)
@@ -227,9 +227,9 @@ export default function Home() {
         </div>
       )}
 
-      {/* Film Reel Scrolling Wheel */}
+      {/* Film Scrollbar */}
       {response?.success && (
-        <FilmReelWheel
+        <FilmScrollbar
           scrollProgress={scrollProgress}
           scrollContainerRef={scrollContainerRef}
           isVisible={showReelWheel}
