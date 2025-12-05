@@ -261,6 +261,26 @@ async def run_scrape(username: str, year):
         for actor, info in sorted(actor_map.items(), key=lambda x: x[1]["count"], reverse=True)
     ]
     
+    # Build director mapping
+    director_map = {}
+    for _, row in unique_df.iterrows():
+        title = row.get("movie_name") or ""
+        items = row.get("directors") or []
+        if isinstance(items, str):
+            items = [x.strip() for x in items.split(";")]
+        for director in items:
+            if not director:
+                continue
+            entry = director_map.setdefault(director, {"count": 0, "films": []})
+            entry["count"] += 1
+            entry["films"].append(title)
+    
+    # Convert director map to list sorted by count
+    director_list = [
+        {"director": director, "count": info["count"], "films": info["films"]}
+        for director, info in sorted(director_map.items(), key=lambda x: x[1]["count"], reverse=True)
+    ]
+    
     timing['stats_calculation_time'] = time.time() - stats_start
     
     # Fetch images for #1 actor and director only
@@ -434,6 +454,9 @@ async def run_scrape(username: str, year):
         
         # Actor mapping (all actors with their films)
         'actors_detailed': actor_list[:50],  # Top 50 actors
+        
+        # Director mapping (all directors with their films)
+        'directors_detailed': director_list[:50],  # Top 50 directors
         
         # Cumulative watch timeline (aggregated by date)
         'watch_timeline': stats_collector.get_cumulative_timeline_aggregated(),

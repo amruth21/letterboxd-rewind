@@ -22,10 +22,15 @@ export default function FilmScrollbar({ scrollProgress, scrollContainerRef, isVi
         setScrollbarWidth(scrollbarRef.current.offsetWidth)
       }
     }
-    updateWidth()
+    // Update width when component becomes visible
+    if (isVisible) {
+      // Small delay to ensure DOM is ready
+      setTimeout(updateWidth, 0)
+      updateWidth()
+    }
     window.addEventListener('resize', updateWidth)
     return () => window.removeEventListener('resize', updateWidth)
-  }, [])
+  }, [isVisible])
 
   const handleMouseDown = (e: React.MouseEvent) => {
     if (!scrollbarRef.current || !scrollContainerRef.current) return
@@ -66,10 +71,14 @@ export default function FilmScrollbar({ scrollProgress, scrollContainerRef, isVi
       const maxScroll = container.scrollWidth - container.clientWidth
       const currentWidth = scrollbar.offsetWidth
       
-      // Calculate drag delta
+      // Calculate drag delta with reduced sensitivity
       const deltaX = e.clientX - dragStartX.current
-      const scrollRatio = maxScroll / (currentWidth - Math.max(60, currentWidth * 0.15))
-      const newScrollLeft = dragStartScroll.current + (deltaX * scrollRatio)
+      const thumbWidth = Math.max(60, currentWidth * 0.15)
+      const trackWidth = currentWidth - thumbWidth
+      
+      // Map mouse movement to scroll movement with reduced sensitivity
+      const scrollRatio = maxScroll / trackWidth
+      const newScrollLeft = dragStartScroll.current + (deltaX * scrollRatio * 0.5) // 0.5 reduces sensitivity significantly
       
       container.scrollLeft = Math.max(0, Math.min(maxScroll, newScrollLeft))
     }
@@ -88,10 +97,10 @@ export default function FilmScrollbar({ scrollProgress, scrollContainerRef, isVi
     }
   }, [isDragging, scrollContainerRef])
 
-  if (!isVisible) return null
+  if (!isVisible || scrollbarWidth === 0) return null
 
   const thumbWidth = Math.max(60, scrollbarWidth * 0.15) // Minimum 60px, or 15% of scrollbar
-  const thumbLeft = (scrollbarWidth - thumbWidth) * scrollProgress
+  const thumbLeft = Math.max(0, (scrollbarWidth - thumbWidth) * scrollProgress)
 
   return (
     <motion.div

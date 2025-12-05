@@ -44,6 +44,33 @@ export default function Home() {
     }
   }, [response])
 
+  // Build movies map for actors and directors
+  const moviesMap = useMemo(() => {
+    if (!response?.success) return {}
+    
+    const map: Record<string, string[]> = {}
+    
+    // Add actors
+    if (response.actors_detailed) {
+      response.actors_detailed.forEach((item: any) => {
+        if (item.actor && item.films) {
+          map[item.actor] = item.films
+        }
+      })
+    }
+    
+    // Add directors
+    if (response.directors_detailed) {
+      response.directors_detailed.forEach((item: any) => {
+        if (item.director && item.films) {
+          map[item.director] = item.films
+        }
+      })
+    }
+    
+    return map
+  }, [response])
+
   // Native horizontal scroll - just track progress
   useEffect(() => {
     const container = scrollContainerRef.current
@@ -632,6 +659,7 @@ export default function Home() {
                         topImageUrl={response.top_actor_image_url}
                         color="#0ae053"
                         icon="⭐"
+                        moviesMap={moviesMap}
                       />
                     </div>
                   </FilmFrame>
@@ -647,6 +675,7 @@ export default function Home() {
                         topImageUrl={response.top_director_image_url}
                         color="#41bcf4"
                         icon="🎬"
+                        moviesMap={moviesMap}
                       />
                     </div>
                   </FilmFrame>

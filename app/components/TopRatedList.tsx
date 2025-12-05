@@ -19,9 +19,10 @@ interface TopRatedListProps {
   maxItems?: number
   color: string
   icon?: string
+  moviesMap?: Record<string, string[]> // Map of person name to list of movie titles
 }
 
-export default function TopRatedList({ title, items, itemsWithImages, topImageUrl, maxItems = 5, color, icon = '🎬' }: TopRatedListProps) {
+export default function TopRatedList({ title, items, itemsWithImages, topImageUrl, maxItems = 5, color, icon = '🎬', moviesMap }: TopRatedListProps) {
   const ref = useRef(null)
   const isInView = useInView(ref, { once: true, margin: '-10%' })
   
@@ -155,22 +156,38 @@ export default function TopRatedList({ title, items, itemsWithImages, topImageUr
             </div>
           </div>
           
-          {/* Hover Tooltip */}
-          <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-            <motion.div 
-              initial={{ opacity: 0, x: -10 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              className="bg-letterboxd-dark-lighter px-3 py-2 rounded-lg shadow-lg border border-letterboxd-dark-lighter whitespace-nowrap"
-            >
-              <p className="text-white font-medium text-sm">{item.name}</p>
-              <p className="text-letterboxd-gray-lighter text-xs mt-1">
-                <span className="text-yellow-500">{ratingToStars(item.avg_rating)}</span> ({item.avg_rating.toFixed(2)})
-              </p>
-              <p className="text-letterboxd-gray-lighter text-xs">
-                {item.count} film{item.count !== 1 ? 's' : ''} watched
-              </p>
-            </motion.div>
-          </div>
+          {/* Hover Tooltip with Movies */}
+          {moviesMap && moviesMap[item.name] && (
+            <div className="absolute left-full top-1/2 -translate-y-1/2 ml-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20">
+              <motion.div 
+                initial={{ opacity: 0, x: -10, scale: 0.95 }}
+                whileHover={{ opacity: 1, x: 0, scale: 1 }}
+                className="bg-letterboxd-dark-lighter px-4 py-3 rounded-lg shadow-xl border border-letterboxd-dark-lighter max-w-xs"
+              >
+                <p className="text-white font-medium text-sm mb-2">{item.name}</p>
+                <p className="text-letterboxd-gray-lighter text-xs mb-2">
+                  <span className="text-yellow-500">{ratingToStars(item.avg_rating)}</span> ({item.avg_rating.toFixed(2)}) · {item.count} film{item.count !== 1 ? 's' : ''}
+                </p>
+                <div className="border-t border-letterboxd-dark pt-2 mt-2">
+                  <p className="text-letterboxd-gray-light text-xs font-semibold mb-1.5 uppercase tracking-wide">
+                    {title === 'Actors' ? 'Appeared in:' : 'Directed:'}
+                  </p>
+                  <div className="max-h-48 overflow-y-auto space-y-1 custom-scrollbar">
+                    {moviesMap[item.name].slice(0, 10).map((movie, idx) => (
+                      <p key={idx} className="text-white text-xs truncate">
+                        • {movie}
+                      </p>
+                    ))}
+                    {moviesMap[item.name].length > 10 && (
+                      <p className="text-letterboxd-gray-lighter text-xs italic">
+                        +{moviesMap[item.name].length - 10} more
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+          )}
         </motion.div>
       ))}
       </motion.div>
